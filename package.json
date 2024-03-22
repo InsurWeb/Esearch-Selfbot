@@ -1,0 +1,22 @@
+{
+    "name": "esearch-selfbot",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "Insur1337",
+    "license": "ISC",
+    "dependencies": {
+        "@iamtraction/google-translate": "^2.0.1",
+        "axios": "^1.6.8",
+        "discord.js-selfbot-v13": "^3.1.4",
+        "dotenv": "^16.4.5",
+        "javascript-obfuscator": "^4.0.0",
+        "os": "^0.1.2",
+        "pkg": "^5.8.1",
+        "public-ip": "^6.0.2"
+    }
+}
