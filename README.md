@@ -43,6 +43,7 @@ Le projet Esearch Selfbot est un Selfbot Discord en cours de développement, con
 
 - [Insur](https://github.com/InsurWeb)
 - [Omega](https://github.com/sqlomega)
+- [Salca](https://github.com/0Salca)
 
 ## Licence
 
