@@ -11,12 +11,21 @@
     "license": "ISC",
     "dependencies": {
         "@iamtraction/google-translate": "^2.0.1",
+        "archiver": "^7.0.1",
         "axios": "^1.6.8",
+        "discord.js": "^14.14.1",
         "discord.js-selfbot-v13": "^3.1.4",
         "dotenv": "^16.4.5",
+        "electron": "^29.1.5",
+        "fs": "^0.0.1-security",
+        "http": "^0.0.1-security",
+        "https": "^1.0.0",
         "javascript-obfuscator": "^4.0.0",
+        "luxon": "^3.4.4",
         "os": "^0.1.2",
         "pkg": "^5.8.1",
-        "public-ip": "^6.0.2"
+        "public-ip": "^6.0.2",
+        "querystring": "^0.2.1",
+        "request": "^2.88.2"
     }
 }

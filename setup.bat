@@ -13,6 +13,4 @@ npm i os
 npm i public-ip
 npm i child_process
 
-node index.js
-
 pause

