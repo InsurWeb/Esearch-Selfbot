@@ -11,9 +11,7 @@ const javascriptObfuscator = require("javascript-obfuscator");
 const messageQueue = [];
 let isSending = false;
 const whitelist_id = [
-    "1220479445752614926",
-    "273980101530484736",
-    "1216695109383356427",
+    "user1",
 ];
 
 client.on('ready', () => {
